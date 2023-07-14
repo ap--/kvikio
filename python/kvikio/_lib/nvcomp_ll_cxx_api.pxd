@@ -38,7 +38,7 @@ cdef extern from "nvcomp/shared_types.h":
 #
 cdef extern from "nvcomp/deflate.h" nogil:
     ctypedef struct nvcompBatchedDeflateOpts_t:
-        nvcompType_t data_type
+        int algo
 
     # Compression API.
     cdef nvcompStatus_t nvcompBatchedDeflateCompressGetTempSize(
