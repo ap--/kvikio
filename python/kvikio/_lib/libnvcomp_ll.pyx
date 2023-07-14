@@ -888,5 +888,6 @@ SUPPORTED_ALGORITHMS = {
         nvCompBatchAlgorithmGdeflate,
         nvCompBatchAlgorithmZstd,
         nvCompBatchAlgorithmSnappy,
+        nvCompBatchAlgorithmDeflate,
     ]
 }
