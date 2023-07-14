@@ -301,7 +301,7 @@ from kvikio._lib.nvcomp_ll_cxx_api cimport (
 class nvCompBatchAlgorithmDeflate(nvCompBatchAlgorithm):
     """Deflate algorithm implementation."""
 
-    algo_id: str = "Deflate"
+    algo_id: str = "deflate"
 
     options: nvcompBatchedDeflateOpts_t
 
