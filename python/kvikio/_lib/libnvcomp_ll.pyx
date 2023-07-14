@@ -286,6 +286,127 @@ cdef cudaStream_t to_stream(stream):
 
 
 #
+# Deflate algorithm.
+#
+from kvikio._lib.nvcomp_ll_cxx_api cimport (
+    nvcompBatchedDeflateCompressAsync,
+    nvcompBatchedDeflateCompressGetMaxOutputChunkSize,
+    nvcompBatchedDeflateCompressGetTempSize,
+    nvcompBatchedDeflateDecompressAsync,
+    nvcompBatchedDeflateDecompressGetTempSize,
+    nvcompBatchedDeflateOpts_t,
+)
+
+
+class nvCompBatchAlgorithmDeflate(nvCompBatchAlgorithm):
+    """Deflate algorithm implementation."""
+
+    algo_id: str = "Deflate"
+
+    options: nvcompBatchedDeflateOpts_t
+
+    def __init__(self, data_type: int = 0):
+        self.options = nvcompBatchedDeflateOpts_t(data_type)
+
+    def _get_comp_temp_size(
+        self,
+        size_t batch_size,
+        size_t max_uncompressed_chunk_bytes,
+    ) -> (nvcompStatus_t, size_t):
+        cdef size_t temp_bytes = 0
+
+        err = nvcompBatchedDeflateCompressGetTempSize(
+            batch_size,
+            max_uncompressed_chunk_bytes,
+            self.options,
+            &temp_bytes
+        )
+
+        return (err, temp_bytes)
+
+    def _get_comp_chunk_size(self, size_t max_uncompressed_chunk_bytes):
+        cdef size_t max_compressed_bytes = 0
+
+        err = nvcompBatchedDeflateCompressGetMaxOutputChunkSize(
+            max_uncompressed_chunk_bytes,
+            self.options,
+            &max_compressed_bytes
+        )
+
+        return (err, max_compressed_bytes)
+
+    def _compress(
+        self,
+        uncomp_chunks,
+        uncomp_chunk_sizes,
+        size_t max_uncomp_chunk_bytes,
+        size_t batch_size,
+        temp_buf,
+        comp_chunks,
+        comp_chunk_sizes,
+        stream
+    ):
+        # Cast buffer pointers that have Python int type to appropriate C types
+        # suitable for passing to nvCOMP API.
+        return nvcompBatchedDeflateCompressAsync(
+            <const void* const*>to_ptr(uncomp_chunks),
+            <const size_t*>to_ptr(uncomp_chunk_sizes),
+            max_uncomp_chunk_bytes,
+            batch_size,
+            <void*>to_ptr(temp_buf),
+            <size_t>temp_buf.nbytes,
+            <void* const*>to_ptr(comp_chunks),
+            <size_t*>to_ptr(comp_chunk_sizes),
+            self.options,
+            to_stream(stream),
+            )
+
+    def _get_decomp_temp_size(
+        self,
+        size_t batch_size,
+        size_t max_uncompressed_chunk_bytes,
+    ):
+        cdef size_t temp_bytes = 0
+
+        err = nvcompBatchedDeflateDecompressGetTempSize(
+            batch_size,
+            max_uncompressed_chunk_bytes,
+            &temp_bytes
+        )
+
+        return (err, temp_bytes)
+
+    def _decompress(
+        self,
+        comp_chunks,
+        comp_chunk_sizes,
+        size_t batch_size,
+        temp_buf,
+        uncomp_chunks,
+        uncomp_chunk_sizes,
+        actual_uncomp_chunk_sizes,
+        statuses,
+        stream,
+    ):
+        # Cast buffer pointers that have Python int type to appropriate C types
+        # suitable for passing to nvCOMP API.
+        return nvcompBatchedDeflateDecompressAsync(
+            <const void* const*>to_ptr(comp_chunks),
+            <const size_t*>to_ptr(comp_chunk_sizes),
+            <const size_t*>to_ptr(uncomp_chunk_sizes),
+            <size_t*>NULL,
+            batch_size,
+            <void* const>to_ptr(temp_buf),
+            <size_t>temp_buf.nbytes,
+            <void* const*>to_ptr(uncomp_chunks),
+            <nvcompStatus_t*>NULL,
+            to_stream(stream),
+            )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(data_type={self.options['data_type']})"
+
+#
 # LZ4 algorithm.
 #
 from kvikio._lib.nvcomp_ll_cxx_api cimport (
