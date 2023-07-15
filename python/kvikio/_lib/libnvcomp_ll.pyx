@@ -305,8 +305,8 @@ class nvCompBatchAlgorithmDeflate(nvCompBatchAlgorithm):
 
     options: nvcompBatchedDeflateOpts_t
 
-    def __init__(self, data_type: int = 0):
-        self.options = nvcompBatchedDeflateOpts_t(data_type)
+    def __init__(self, algo: int = 0):
+        self.options = nvcompBatchedDeflateOpts_t(algo)
 
     def _get_comp_temp_size(
         self,
@@ -363,13 +363,13 @@ class nvCompBatchAlgorithmDeflate(nvCompBatchAlgorithm):
 
     def _get_decomp_temp_size(
         self,
-        size_t batch_size,
+        size_t num_chunks,
         size_t max_uncompressed_chunk_bytes,
     ):
         cdef size_t temp_bytes = 0
 
         err = nvcompBatchedDeflateDecompressGetTempSize(
-            batch_size,
+            num_chunks,
             max_uncompressed_chunk_bytes,
             &temp_bytes
         )
@@ -394,17 +394,17 @@ class nvCompBatchAlgorithmDeflate(nvCompBatchAlgorithm):
             <const void* const*>to_ptr(comp_chunks),
             <const size_t*>to_ptr(comp_chunk_sizes),
             <const size_t*>to_ptr(uncomp_chunk_sizes),
-            <size_t*>NULL,
+            <size_t*>to_ptr(actual_uncomp_chunk_sizes),
             batch_size,
             <void* const>to_ptr(temp_buf),
             <size_t>temp_buf.nbytes,
             <void* const*>to_ptr(uncomp_chunks),
-            <nvcompStatus_t*>NULL,
+            <nvcompStatus_t*>to_ptr(statuses),
             to_stream(stream),
             )
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(data_type={self.options['data_type']})"
+        return f"{self.__class__.__name__}(algo={self.options['algo']})"
 
 #
 # LZ4 algorithm.
